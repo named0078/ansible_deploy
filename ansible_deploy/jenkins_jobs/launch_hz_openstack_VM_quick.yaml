@@ -1,0 +1,38 @@
+- job:
+    name: LAUNCH_HZ_OPENSTACK_VM_QUICK
+    project-type: freestyle
+    default: global
+    description: 'launch an openstack VM from http://hz-dc-os-ohn-12.eecloud.nsn-net.net cloud  and create ssh user("ansible")'
+    build-discarder:
+      daysToKeep: 10
+      numToKeep: 30
+      artifactDaysToKeep: -1
+      artifactNumToKeep: -1
+
+    scm:
+    - git:
+        url: ssh://ADMIN-Hooks@testgerrit.com:29418/IT/gerrit/ansible_deploy
+        basedir: ansible_deploy
+
+    builders: 
+      - shell: |
+          #!/bin/bash
+          ## define vars
+          timestamp=`date +%s`
+          vm_name="auto-test-""${timestamp}"  ## create vm name
+
+          ## excute ansible playbook to create instance and ssh user"ansible"
+          cd $WORKSPACE/ansible_deploy/environments/
+
+          chmod 600 ssh-key/*
+
+          ansible-playbook ../launch_hz_openstack_VM.yml  --extra-vars "environment=test vm_name=${vm_name} image=eecloud-baseimages-rhel-7.4-2018-01-09 key_name= flavor=ea.002-0008 network=network-test"
+
+          sleep 120;        ## wait for openstack cloud creating floating IP
+
+          IP=`cat test/hosts | awk -F ' ' '{print $1}'`
+
+          ansible-playbook -e target_host=${IP} ../launch_openstack_user.yml
+
+          ## modify hosts(ssh login way)
+          sed -i "s/ansible_ssh_user=root ansible_ssh_private_key_file=ssh-key\/hz-dc-os-ohn-12-eecloud.pem/ansible_ssh_user=ansible/" test/hosts

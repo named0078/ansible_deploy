@@ -1,0 +1,60 @@
+---
+
+## this is to create "ansible" user in new vm, and it runs after launch_openstack_VM.yml
+## parameter: {{ target_host }}	, for example: ansible-playbook -e target_host='10.182.17.214' ../launch_openstack_user.yml
+
+- hosts: "{{ target_host }}"
+  remote_user: root
+  sudo: yes
+
+  tasks:
+#  - name: modify yum resource
+#    lineinfile: 
+#      dest: /etc/yum.repos.d/nsn.repo 
+#      state: absent
+#      regexp: "^proxy=_none_"
+#      backup: yes
+
+  - name: add DNS server IP 
+    lineinfile: 
+      dest: /etc/resolv.conf 
+      insertafter: '^search'
+      line: "nameserver 10.171.0.2"
+      backup: yes
+
+  - name: make ssh user Passwordless login
+    lineinfile: 
+      "dest=/etc/sudoers 
+      state=present 
+      regexp='^# %wheel' 
+      line='%wheel        ALL=(ALL)       NOPASSWD: ALL'
+      backup=yes"
+
+  - name: create user
+    user:
+      name: ansible
+      groups: wheel
+      state: present
+      home: /home/ansible
+
+  - name: create .ssh folder
+    file:
+      path: "/home/ansible/.ssh"
+      state: directory
+      mode: 0700
+      owner: ansible
+      group: ansible
+
+  - name: create authorized_keys
+    file: 
+      path: "/home/ansible/.ssh/authorized_keys"
+      state: touch
+      mode: 0644
+
+  - name: add ansible ssh public key to the ~/.ssh/authorized_keys files
+    lineinfile:
+      dest: /home/ansible/.ssh/authorized_keys
+      state: present
+      line: "ssh-rsa "
+      owner: ansible
+      group: ansible

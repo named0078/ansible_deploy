@@ -1,0 +1,36 @@
+---
+
+## this playbook is auto deploy/update jenkins-jobs 
+
+- job:
+    name: AUTO_DEPLOY_JENKINS_JOBS
+    project-type: freestyle
+    default: global
+    description: 'auto deploy/update jenkins-jobs'
+    disabled: false
+    build-discarder:
+      daysToKeep: 10
+      numToKeep: 30
+      artifactDaysToKeep: -1
+      artifactNumToKeep: -1
+
+    scm:
+    - git:
+        url: ssh://ADMIN-Hooks@testgerrit.com:29418/IT/gerrit/ansible_deploy
+        basedir: ansible_deploy
+
+    builders:
+      - shell: |
+          #!/bin/bash
+
+          cd $WORKSPACE/ansible_deploy/jenkins_jobs/
+
+          jobs=`ls`
+
+          for name in ${jobs[@]}
+          do
+          if [ -f $name ]
+          then
+          result=`jenkins-jobs update $name`
+          fi
+          done

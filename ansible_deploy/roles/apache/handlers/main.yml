@@ -1,0 +1,25 @@
+#add by David
+- name: start apache
+  become: yes
+  systemd:
+    name=httpd
+    enabled=yes
+    state=started
+    masked=no
+
+- name: stop apache
+  become: yes
+  systemd:
+    name=httpd
+    enabled=yes
+    state=stopped
+    masked=no
+
+- name: restart apache
+  become: yes
+  systemd:
+    name=httpd
+    enabled=yes
+    state=restarted
+    masked=no
+

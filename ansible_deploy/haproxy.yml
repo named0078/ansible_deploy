@@ -1,0 +1,9 @@
+#This script will install haproxy in target server
+#usage: 
+#1. cd path/to/environment
+#2. ansible-playbook -e target_host=<haproxy_server_ip> -e ip_master_1=<master2_ip> -e ip_master_2=<master2_ip>  ../haproxy.yml     
+- hosts: "{{ target_host }}"
+  #sudo: yes
+  roles:
+    - common
+    - ansible-role-haproxy

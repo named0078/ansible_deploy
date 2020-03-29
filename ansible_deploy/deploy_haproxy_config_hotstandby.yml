@@ -1,0 +1,46 @@
+# Function: Deploy hapxoy config file or used as HA gerrit swith active/standby gerrit server
+# Usage:
+# cd path/to/environment
+# ansible-playbook -e target_host=<ha_server> -e active_gerrit_master=<active_gerrit_master>  ../deploy_haproxy_config.yml
+
+- name: deploy haproxy config
+  hosts: "{{ target_host }}"
+
+  tasks:
+    - name: include some vars
+      include_vars:
+        file: roles/common/vars/main.yml
+
+    - name: clone IT/gerrit/haproxy/config repository
+      become: yes
+      become_user: "{{ gerrit_user }}"
+      git:
+        repo: ssh://{{ gerrit_ssh_user }}@{{ gerrit_master_server }}:{{gerrit_master_port }}/IT/gerrit/haproxy/config 
+        dest: "{{ gerrit_home }}/scratch/haproxy-config/"
+        key_file: "{{ key_file }}"
+        accept_hostkey: yes
+        force: yes
+      register: clone_haproxy_config
+
+    - name: check the given active master if correct
+      become: yes
+      fail:
+        msg: "Please give correct active gerrit master IP or hostname."
+      when: active_gerrit_master not in "Server1 hostname,server1 IP,Server2 hostname,server2 IP"
+
+    - name: deploy new haproxy.cfg haproxy server /gerrit/haproxy/config/ directory
+      become: yes
+      become_user: "{{ gerrit_user }}"
+      command: "cp -fp  {{ gerrit_home }}/scratch/haproxy-config/haproxy_Server1_active.cfg {{gerrit_home }}/haproxy/config/haproxy.cfg"
+      when: (active_gerrit_master == "Server1 hostname") or (active_gerrit_master == "Server1 IP")
+
+    - name: deploy new haproxy.cfg haproxy server /gerrit/haproxy/config/ directory
+      become: yes
+      become_user: "{{ gerrit_user }}"
+      command: "cp -fp {{ gerrit_home }}/scratch/haproxy-config/haproxy_Server2_active.cfg {{gerrit_home }}/haproxy/config/haproxy.cfg"
+      when: (active_gerrit_master == "Server2 hostname") or (active_gerrit_master ==  "Server2 IP")
+
+    - name: restart haproxy service
+      become: yes
+      shell: "{{ gerrit_home }}/haproxy/sbin/haproxy -f {{ gerrit_home }}/haproxy/config/haproxy.cfg -st `cat /var/run/haproxy.pid`"
+      tags: restart_haproxy

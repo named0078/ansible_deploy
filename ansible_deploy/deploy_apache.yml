@@ -1,0 +1,12 @@
+---
+#deploy apache and and initial apache config for target host
+#Usage:
+#  1. add target host server to inventory file
+#  2. cd  path/to/environments/
+#  3. ansible-palybook -e target_host=<target_host> ../deploy_apache.yml
+
+- name: deploy apache
+  hosts: "{{ target_host }}"
+  roles:
+  - common
+  - apache

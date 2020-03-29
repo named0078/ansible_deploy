@@ -1,0 +1,46 @@
+---
+
+## this playbook is for auto create instance in http://hz-dc-os-ohn-11.eecloud.nsn-net.net/
+## parameters: <environment>, <vm_name>, <image>, <key_name>, <flavor>, <network>
+## For example, you can run 
+## 	cd ~/ansible_deploy/environments	
+## 	ansible-playbook ../launch_hz_openstack_VM.yml --extra-vars "vm_name=auto_test01 image=eecloud-baseimages-rhel-7.4-2018-01-09 key_name=hz-dc-os-ohn-12-eecloud flavor=ea.002-0008 network=network-test"
+## After that ,you need to run launch_openstack_user.yml to create remote ssh user
+
+- name: Launch OpenStack VM
+  hosts: localhost
+  gather_facts: false
+  tasks:
+  - name: Deploy a VM instance
+    os_server:
+      auth: 
+#       auth_url: http://10.182.16.16:5000/v2.0
+        auth_url: http://hz-dc-os-ohn-12.eecloud.nsn-net.net:5000
+        username: david
+        password: ******
+        project_name: david
+      name: "{{ vm_name }}"
+      state: present
+      image: "{{ image }}"
+      key_name: "{{ key_name }}"
+      security_groups: 
+      - all
+#      - ssh
+#      - ldap
+      wait: yes
+      flavor: "{{ flavor }}"
+      auto_floating_ip: yes
+      network: "{{ network }}"
+      meta:
+        hostname: gerrit.localdomain
+    register: new_compute_instance
+
+  - name: Add host to inventory
+    shell: |
+      export host_path=`pwd`
+      echo '{{ new_compute_instance.server.public_v4 }} ansible_ssh_user=root ansible_ssh_private_key_file=ssh-key/hz-openstack-cloud-iris.pem' >> $host_path/environments/test/hosts
+
+#  - name: Add host to inventory
+#    lineinfile:
+#      dest: "{{ environment }}/hosts"
+#      line: "{{ new_compute_instance.server.public_v4 }} ansible_ssh_user=root ansible_ssh_private_key_file=ssh-key/hz-openstack-cloud-iris.pem"

@@ -1,0 +1,18 @@
+---
+# Target ansible variables
+gerrit_home: "/gerrit"
+git_home: "{{ gerrit_home }}/git"
+java_home: "{{ gerrit_home }}/jre"
+gerrit_user: "gerrit"
+gerrit_master_server: "gerrit.***.com"
+gerrit_master_port: "29418"
+key_file: "{{ gerrit_home }}/.ssh/id_rsa"
+# Local ansible variables
+gerrit_ssh_user: "peiwenj"
+gerrit_ssh_pvt_key: |
+  -----BEGIN RSA PRIVATE KEY-----
+  *******************************
+  -----END RSA PRIVATE KEY-----
+
+postgres_user: "postgres"
+

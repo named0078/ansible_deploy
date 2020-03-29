@@ -1,0 +1,56 @@
+---
+- name: Ensure haproxy installation directory and haproxy config directory exists
+  become: yes
+  file: 
+    path: "{{ gerrit_home }}/haproxy/config"
+    state: directory
+    mode: 0755
+    owner: "{{ gerrit_user }}"
+    group: "{{ gerrit_user }}"
+
+- name: Ensure scratch/haproxy directory does not exist
+  become: yes
+  become_user: "{{ gerrit_user }}" 
+  file:
+    path: "{{ gerrit_home }}/scratch/haproxy"
+    state: absent
+
+- name: Add gerrit master public key in HAProxy server known_hosts
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  git:
+    repo: "ssh://{{ gerrit_ssh_user }}@{{ gerrit_master_server }}:{{ gerrit_master_port }}/IT/gerrit/tools/haproxy"
+    key_file: "{{ key_file }}"
+    accept_hostkey: yes
+    force: yes
+    clone: no
+ 
+- name: Ensure HAProxy is installed (RedHat).
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  shell: "export PATH=/usr/local/bin:$PATH;git-lfs clone ssh://{{ gerrit_ssh_user }}@{{ gerrit_master_server }}:{{ gerrit_master_port }}/IT/gerrit/tools/haproxy {{ gerrit_home }}/scratch/haproxy/"
+
+- name: Extract haproxy.tar.gz to /gerrit/haproxy package
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  unarchive:
+    src: "{{ gerrit_home }}/scratch/haproxy/dist/haproxy.tar.gz"
+    dest: "{{ gerrit_home }}/haproxy/"
+    remote_src: yes
+
+
+- name: Copy HAProxy configuration in place.
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  template:
+    src: haproxy.cfg.j2
+    dest: "{{ gerrit_home }}/haproxy/config/haproxy.cfg"
+    mode: 0644
+  #  validate: haproxy -f %s -c -q
+  notify: restart haproxy
+
+- name: Ensure haproxy restart
+  become: yes
+  shell: "{{ gerrit_home }}/haproxy/sbin/haproxy -f {{ gerrit_home }}/haproxy/config/haproxy.cfg -st `cat /var/run/haproxy.pid`"
+  tags: restart_ha
+

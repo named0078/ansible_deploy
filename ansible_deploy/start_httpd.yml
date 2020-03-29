@@ -1,0 +1,21 @@
+- name: start httpd service
+  hosts: "{{ target_host }}"
+
+  tasks:
+    - name: include some var
+      include_vars:
+        file: roles/common/vars/main.yml
+
+    - name: check if httpd is installed
+      stat:
+        path: /usr/sbin/httpd
+      register: check_httpd
+
+    - name: start httpd in gerrit server
+      become: yes
+      service:
+        name: httpd
+        state: started
+      tags: start_httpd
+      when: check_httpd.stat.exists == True
+

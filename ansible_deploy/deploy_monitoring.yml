@@ -1,0 +1,12 @@
+## Deploy nagios plugins on client(gerrit) servers
+## usage:
+## 	1. cd path/to/environments
+## 	2. ansible-playbook -e target_host=<IP> ../deploy_monitoring.yml
+
+- hosts: "{{ target_host }}"
+  gather_facts: no
+  roles:
+  - common
+  - monitoring
+  - monitoring-config
+  - monitoring-restart

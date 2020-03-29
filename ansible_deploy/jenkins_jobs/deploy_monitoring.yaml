@@ -1,0 +1,37 @@
+- job:
+    name: DEPLOY_MONITORING
+    project-type: freestyle
+    default: global
+    description: 'Install nrpe & nagios plugins automaticly on client(gerrit) servers'
+    disabled: false
+    parameters:
+      - string:
+          name: TARGET_HOST
+          default: NULL
+          description: "Please enter a target_host"
+    build-discarder:
+      daysToKeep: 10
+      numToKeep: 30
+      artifactDaysToKeep: -1
+      artifactNumToKeep: -1
+
+    build-discarder:
+      daysToKeep: 10
+      numToKeep: 30
+
+    scm:
+    - git:
+        url: ssh://ADMIN-Hooks@testgerrit.com:29418/IT/gerrit/ansible_deploy
+        basedir: ansible_deploy
+
+    builders: 
+      - shell: |
+          #!/bin/bash
+
+          echo "$TARGET_HOST ansible_ssh_user=ansible" >> $WORKSPACE/ansible_deploy/environments/test/hosts
+
+          cd $WORKSPACE/ansible_deploy/environments
+
+          ansible-playbook \
+                -e target_host=$TARGET_HOST \
+                ../deploy_monitoring.yml

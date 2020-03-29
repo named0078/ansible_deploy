@@ -1,0 +1,12 @@
+---
+
+## This playbook is for auto install docker
+## prerequisite: ssh can login target instance and hosts inventory have instance information
+## How to run:
+##      cd ~/ansible_deploy/environments
+##      ansible-playbook -e target_host='<IP>' ../docker.yml
+
+- hosts: "{{ target_host }}"
+  roles:
+  - common
+  - jre

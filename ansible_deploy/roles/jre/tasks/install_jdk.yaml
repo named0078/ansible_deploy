@@ -1,0 +1,51 @@
+---
+
+- include_vars: ../../common/vars/main.yml
+
+- name: Verify JRE directory
+  become: yes
+  stat: path="{{ gerrit_home }}/jre/jre/bin/java"
+  register: jre_check
+
+- name: Cleaning up scratch area
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  file:
+    path: "{{ gerrit_home }}/scratch/"
+    state: absent
+
+- name: Clone JRE repository
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  shell: "export PATH=/usr/local/bin:$PATH;git-lfs clone ssh://{{ gerrit_ssh_user }}@{{ gerrit_master_server }}:{{ gerrit_master_port }}/IT/gerrit/tools/jre {{ gerrit_home}}/scratch/jre"
+
+- name: Create jdk tar package unzip directory
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  file:
+    path: "{{gerrit_home }}/scratch/jre/dist/jre/"
+    state: directory
+    mode: 0755
+
+- name: Unzip dist jdk binary package
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  unarchive:
+    remote_src: yes    ## Set remote_src=yes to unpack an archive which already exists on the target.
+    src: "{{ gerrit_home }}/scratch/jre/dist/jdk.tar.gz"
+    dest: "{{gerrit_home }}/scratch/jre/dist/jre/"
+
+- name: synchronize JRE installation files
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  command: "rsync -av --delete {{ gerrit_home }}/scratch/jre/dist/jre/ {{gerrit_home }}/jre/"
+
+- name: Add jre path to global environment
+  become: yes
+  shell: "echo '## Add jre path\n export PATH=/gerrit/jre/bin:$PATH' >> /etc/profile"
+  when: jre_check.stat.exists == False
+
+- name: Ensure the PATH we added become effective
+  become: yes
+  shell: "source /etc/profile"
+  when: jre_check.stat.exists == False

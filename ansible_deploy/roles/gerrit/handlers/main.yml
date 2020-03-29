@@ -1,0 +1,13 @@
+#add by David
+- name: start gerrit
+  become: yes
+  command: "{{ gerrit_home }}/gerrit/bin/gerrit.sh start"
+
+- name: stop gerrit
+  become: yes
+  command: "{{ gerrit_home }}/gerrit/bin/gerrit.sh stop"
+  ignore_errors: yes
+
+- name: restart gerrit
+  become: yes
+  command: "{{ gerrit_home }}/gerrit/bin/gerrit.sh restart"

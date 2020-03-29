@@ -1,0 +1,46 @@
+- job:
+    name: DEPLOY_GERRIT_JAVA
+    project-type: freestyle
+    default: global
+    description: 'install jdk automaticly on target machine'
+    disabled: false
+    parameters:
+      - string:
+          name: TARGET_HOST
+          default: NULL
+          description: "need input target host IP address, for example:10.182.17.206"
+      - choice:
+          name: "Environment"
+          description: "choice which environment the target host belong to"
+          choices:
+            - '------ Select Environment ------'
+            - prod
+            - like-live
+            - test
+    build-discarder:
+      daysToKeep: 10
+      numToKeep: 30
+      artifactDaysToKeep: -1
+      artifactNumToKeep: -1
+
+    build-discarder:
+      daysToKeep: 10
+      numToKeep: 30
+
+    scm:
+    - git:
+        url: ssh://ADMIN-Hooks@testgerrit.com:29418/IT/gerrit/ansible_deploy
+        basedir: ansible_deploy
+
+    builders: 
+      - shell: |
+          #!/bin/bash
+
+          echo "$TARGET_HOST ansible_ssh_user=ansible" >> $WORKSPACE/ansible_deploy/environments/$Environment/hosts
+
+          cd $WORKSPACE/ansible_deploy/environments
+
+          ansible-playbook \
+                -e target_host=$TARGET_HOST \
+                ../jre.yml
+

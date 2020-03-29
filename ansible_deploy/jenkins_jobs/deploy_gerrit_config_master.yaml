@@ -1,0 +1,55 @@
+- job:
+    name: DEPLOY_GERRIT_CONFIG_MASTER
+    project-type: freestyle
+    default: global
+    description: 'deploy gerrit master config file'
+    disabled: false
+    parameters:
+      - string:
+          name: TARGET_HOST
+          default: NULL
+          description: "Please enter target host ip/dns"
+      - choice:
+          name: Environment
+          description: "Please select a environment"
+          choices:
+            - '------ Select Environment ------'
+            - prod
+            - like-live
+            - test
+      - bool:
+          name: RESTART_GERRIT
+          description: ""
+
+    build-discarder:
+      daysToKeep: 10
+      numToKeep: 30
+      artifactDaysToKeep: -1
+      artifactNumToKeep: -1
+
+
+    scm:
+    - git:
+        url: ssh://ADMIN-Hooks@testgerrit.com:29418/IT/gerrit/ansible_deploy
+        basedir: ansible_deploy
+
+    builders: 
+      - shell: |
+          #!/bin/bash
+          #This job will initial a gerrit master environment with apache reverse proxy.
+
+          echo "$TARGET_HOST ansible_ssh_user=ansible" >> $WORKSPACE/ansible_deploy/environments/$Environment/hosts
+
+          cd $WORKSPACE/ansible_deploy/environments
+
+          if [ "$RESTART_GERRIT" == "true" ];then
+              ansible-playbook \
+                   -e target_host=$TARGET_HOST \
+                   ../deploy_gerrit_config.yml
+          else
+              ansible-playbook \
+                  -e target_host=$TARGET_HOST \
+                  --skip-tags=restart_gerrit  \
+                  ../deploy_gerrit_config.yml
+          fi
+

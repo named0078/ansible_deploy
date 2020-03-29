@@ -1,0 +1,77 @@
+---
+- name: Install CI (Jenkins, ...) on a Redhat
+  hosts: "{{ target_host }}"
+  sudo: yes
+  vars:
+    jenkins_hostname: localhost
+    jenkins_plugins:
+      - git
+      - sonar
+      - ssh
+      - gerrit-trigger
+      - gearman-plugin
+      - zmq-event-publisher
+      - ansicolor
+      - matrix-project
+      - workflow-aggregator
+      - extended-read-permission
+      - ssh-slaves
+      - ansible
+      - copyartifact
+      - build-with-parameters
+
+    jenkins_ssh_known_hosts: |
+
+    jenkins_ssh_private_key: |
+      -----BEGIN RSA PRIVATE KEY-----
+      ******
+      -----END RSA PRIVATE KEY-----
+
+  roles:
+    - role: geerlingguy.java
+      when: "ansible_os_family == 'RedHat'"
+      java_packages:
+        - java-1.8.0-openjdk
+    - role: geerlingguy.jenkins
+    - role: geerlingguy.docker
+
+  post_tasks:
+    - name: Ensure .ssh directory exists.
+      file:
+        dest: /var/lib/jenkins/.ssh
+        group: jenkins
+        mode: 0700
+        owner: jenkins
+        state: directory
+
+    - name: Create ssh known hosts.
+      copy:
+        content: "{{ jenkins_ssh_known_hosts }}"
+        dest: /var/lib/jenkins/.ssh/known_hosts
+        group: jenkins
+        mode: 0600
+        owner: jenkins
+
+    - name: Create ssh private key.
+      copy:
+        content: "{{ jenkins_ssh_private_key }}"
+        dest: /var/lib/jenkins/.ssh/id_rsa
+        group: jenkins
+        mode: 0600
+        owner: jenkins
+
+    - name: install Git, git-review, Pip, (phpunit, php-htmlpurifier, php-mbstring, pcregrep, moreutils for fusionforge)
+      yum: name={{item}} state=present
+      with_items:
+        - git
+        - git-review
+        - python-pip
+        - phpunit
+        #- php-htmlpurifier
+        - php-mbstring
+       # - pcregrep
+        - moreutils
+
+    - name: install Behave using Pip for tests in Python (hooks)
+      pip:
+        name: behave

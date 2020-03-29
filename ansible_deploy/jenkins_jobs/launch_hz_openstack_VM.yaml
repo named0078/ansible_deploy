@@ -1,0 +1,77 @@
+- job:
+    name: LAUNCH_HZ_OPENSTACK_VM
+    project-type: freestyle
+    default: global
+    description: 'launch an openstack VM from http://hz-dc-os-ohn-12.eecloud.nsn-net.net  and create remote ssh user("ansible")'
+    parameters:
+      - string:
+          name: VM_NAME
+          default: NULL
+          description: "Please create a instance name"
+      - choice:
+          name: IMAGE
+          description: "please select a image"
+          choices:
+            - '------ Select version ------'
+            - 'eecloud-baseimages-rhel-7.4-2018-01-09'
+            - 'eecloud-baseimages-centos-7.4-2017-09-18'
+      - choice:
+          name: "KEY_NAME"
+          description: "Please select a key name in EE Cloud"
+          choices:
+            - '------ Select key name ------'
+            - hz-dc-os-ohn-12-eecloud
+      - choice:
+          name: "FLAVOR"
+          description: "Please select a flavor NOTE:ea.001-0002: VCPU:1 RAM:2 GB; ea.002-0008: VCPU:2 RAM:8 GB; ea.004-0012: VCPU:4 RAM:12 GB; ea.008-0024: VCPU:8 RAM:24 GB; ea.016-0044: VCPU:16 RAM:44 GB;"
+          choices:
+            - '------ Select flavor ------'
+            - ea.001-0002
+            - ea.002-0008
+            - ea.004-0012
+            - ea.008-0024
+            - ea.016-0044
+      - choice:
+          name: "NET_WORK"
+          description: "Please select a network from EE Cloud"
+          choices:
+            - '------ Select network ------'
+            - network
+            - network-qa
+            - network-test
+ 
+    build-discarder:
+      daysToKeep: 10
+      numToKeep: 30
+      artifactDaysToKeep: -1
+      artifactNumToKeep: -1
+
+    scm:
+    - git:
+        url: ssh://ADMIN-Hooks@testgerrit.com:29418/IT/gerrit/ansible_deploy
+        basedir: ansible_deploy
+
+    builders: 
+      - shell: |
+          #!/bin/bash
+          ## define vars
+          timestamp=`date +%s`
+          Environment=test
+          
+
+          ## excute ansible playbook to create instance and ssh user"ansible"
+          cd $WORKSPACE/ansible_deploy/environments/
+
+          chmod 600 ssh-key/*
+
+          ansible-playbook ../launch_hz_openstack_VM.yml  --extra-vars "environment=${Environment} vm_name=${VM_NAME} image=${IMAGE} key_name=${KEY_NAME} flavor=${FLAVOR} network=${NET_WORK}"
+
+          sleep 120;        ## wait for openstack cloud creating floating IP
+
+          IP=`cat ${Environment}/hosts | awk -F ' ' '{print $1}'`
+
+          ansible-playbook -e target_host=${IP} ../launch_openstack_user.yml
+
+          ## modify hosts(ssh login way)
+          sed -i "s/ansible_ssh_user=root ansible_ssh_private_key_file=ssh-key\/${KEY_NAME}.pem/ansible_ssh_user=ansible/" ${Environment}/hosts
+

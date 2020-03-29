@@ -1,0 +1,5 @@
+---
+- name: restart haproxy
+#  service: name=haproxy state=restarted
+  become: yes
+  shell: "{{ gerrit_home }}/haproxy/sbin/haproxy -f {{ gerrit_home }}/haproxy/config/haproxy.cfg -st `cat /var/run/haproxy.pid`"

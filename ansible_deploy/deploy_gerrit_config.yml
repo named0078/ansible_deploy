@@ -1,0 +1,38 @@
+---
+#  Function: Deploy gerrit config file, which will update /gerrit/gerrit/etc directory and restart gerrit service.
+#  Relevant git repository:
+#    IT/gerrit/gerrit/master-config
+#  Usage:
+#  1. cd path/to/environments/
+#  2. ansible-playbook -e target_host=<target_host>   ../deploy_gerrit_config.yml
+#  If you just want update gerrit etc directory, did not want to restart gerrit, please use this command:
+#  ansible-playbook -e target_host=<target_host>   --skip-tags=restart_gerrit ../deploy_gerrit_config.yml
+#
+- name: deploy gerrit config | etc
+  hosts: "{{ target_host }}"
+
+  tasks:
+    - name: include some vars
+      include_vars:
+        file: roles/common/vars/main.yml
+
+    - name: clone gerrit master etc repository
+      become: yes
+      become_user: "{{ gerrit_user }}"
+      git:
+        repo: ssh://{{ gerrit_ssh_user }}@{{ gerrit_master_server }}:{{gerrit_master_port }}/IT/gerrit/gerrit/master-config 
+        dest: "{{ gerrit_home }}/scratch/master-config"
+        key_file: "{{ key_file }}"
+        accept_hostkey: yes
+        force: yes
+      register: clone_etc
+
+    - name: sync master-config to etc directory
+      become: yes
+      become_user: "{{ gerrit_user }}"
+      command: "rsync -av --delete {{ gerrit_home }}/scratch/master-config/ {{gerrit_home }}/gerrit/etc/"
+
+    - name: restart gerrit master
+      become: yes
+      command: "{{ gerrit_home}}/gerrit/bin/gerrit.sh restart"
+      tags: restart_gerrit

@@ -1,0 +1,146 @@
+---
+
+## Install nrpe & nagios_plugins on target(client) machines
+
+- include_vars: ../../common/vars/main.yml
+
+- name: Install prerequisites package
+  become: yes
+  yum: name={{ item }} state=present
+  with_items:
+    - gcc
+    - glibc
+    - glibc-common
+    - openssl
+    - openssl-devel
+    - perl
+    - make
+    - gettext
+    - automake
+    - net-snmp
+    - net-snmp-utils
+    - epel-release
+    - perl-Net-SNMP
+
+- name: Create monitoring group
+  become: yes
+  group:
+    name: "{{ monitor_user }}"
+    state: present
+
+- name: Create monitoring user
+  become: yes
+  user:
+    name: nagios
+    groups: nagios
+    state: present
+    home: "{{ monitor_home }}"
+
+- name: Ensure .ssh directory exists
+  become: yes
+  file:
+    path: "{{ monitor_home }}/.ssh"
+    state: directory
+    mode: 0700
+    owner: "{{ monitor_user }}"
+    group: "{{ monitor_user }}"
+
+- name: Install ssh private key to monitor user
+  become: yes
+  copy:
+    content: "{{ monitor_user_ssh_pvt_key }}"
+    dest: "{{ monitor_home }}/.ssh/id_rsa"
+    mode: 0600
+    owner: "{{ monitor_user }}"
+    group: "{{ monitor_user }}"
+
+- name: Install ssh public key to monitor user
+  become: yes
+  copy:
+    content: "{{ monitor_user_ssh_pub_key }}"
+    dest: "{{ monitor_home }}/.ssh/id_rsa.pub"
+    mode: 0644
+    owner: "{{ monitor_user }}"
+    group: "{{ monitor_user }}"
+
+
+- name: Clean old repository
+  become: yes
+  file:
+    name: "{{ gerrit_home }}/scratch/monitoring"
+    state: absent
+
+- name: Clone monitor repository
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  shell: "export PATH=/usr/local/bin:$PATH;git-lfs clone ssh://{{ gerrit_ssh_user }}@{{ gerrit_master_server }}:{{ gerrit_master_port }}/IT/gerrit/tools/monitoring {{ gerrit_home}}/scratch/monitoring"
+
+- name: Unzip nrpe package
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  unarchive:
+    remote_src: yes    ## Set remote_src=yes to unpack an archive which already exists on the target.
+    src: "{{ gerrit_home }}/scratch/monitoring/src/nrpe.tar.gz"
+    dest: "{{gerrit_home }}/scratch/monitoring/src/"
+
+- name: Create monitoring directory
+  become: yes
+  file:
+    name: "{{ gerrit_home }}/monitoring"
+    state: directory
+
+- name: Install nrpe
+  become: yes
+  shell: |
+    cd {{ gerrit_home }}/scratch/monitoring/src/nrpe-3.2.1/
+    ./configure --prefix="{{ gerrit_home }}/monitoring/"
+    make all
+    make install-groups-users
+    make install
+    make install-config
+    echo >> /etc/services
+    echo '# Nagios services' >> /etc/services
+    echo 'nrpe    5666/tcp' >> /etc/services
+    make -I {{ gerrit_home }}/monitoring install-init
+    systemctl enable nrpe.service
+
+- name: Unzip nagios plugin package
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  unarchive:
+    remote_src: yes    ## Set remote_src=yes to unpack an archive which already exists on the target.
+    src: "{{ gerrit_home }}/scratch/monitoring/src/nagios-plugins.tar.gz"
+    dest: "{{gerrit_home }}/scratch/monitoring/src/"
+
+- name: Install nagios plugin
+  become: yes
+  shell: |
+    cd "{{ gerrit_home }}/scratch/monitoring/src/nagios-plugins-release-2.2.1"
+    ./tools/setup
+    ./configure --prefix="{{ gerrit_home }}/monitoring"
+    make
+    make install
+
+- name: Unzip expanded scripts package
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  unarchive:
+    remote_src: yes    ## Set remote_src=yes to unpack an archive which already exists on the target.
+    src: "{{ gerrit_home }}/scratch/monitoring/expanded_scripts.tar.gz"
+    dest: "{{gerrit_home }}/scratch/monitoring/"
+    
+- name: Rsync expanded_scripts to libexec folder
+  become: yes
+  command: "rsync -av {{ gerrit_home }}/scratch/monitoring/expanded_scripts/ {{gerrit_home }}/monitoring/libexec/"
+
+- name: Modify monitoring folder permission
+  become: yes
+  command: "chmod -R 755 {{ gerrit_home }}/monitoring"
+
+- name: Modify monitoring folder owner
+  become: yes
+  command: "chown -R {{ monitor_user }}:{{ monitor_user }} {{ gerrit_home }}/monitoring"
+
+- name: Start nrpe service
+  become: yes
+  systemd: name=nrpe state=started

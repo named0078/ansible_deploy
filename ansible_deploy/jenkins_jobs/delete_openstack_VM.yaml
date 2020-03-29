@@ -1,0 +1,54 @@
+- job:
+    name: DELETE_OPENSTACK_VM
+    project-type: freestyle
+    default: global
+    description: 'delete an openstack VM which do not use any more'
+    parameters:
+      - choice:
+          name: "CLOUD"
+          description: "Please select openstack EE Cloud."
+          choices:
+            - '------ Select openstack cloud name ------'
+            - es-si-os-ohn-42-eecloud
+            - hz-dc-os-ohn-12-eecloud
+      - string:
+          name: INSTANCE_NAME
+          default: NULL
+          description: "Please input instance name"
+      - string:
+          name: IP_ADDRESS
+          default: NULL
+          description: "Please input instance floating IP address, for example:10.182.17.206"
+    build-discarder:
+      daysToKeep: 10
+      numToKeep: 30
+      artifactDaysToKeep: -1
+      artifactNumToKeep: -1
+
+    scm:
+    - git:
+        url: ssh://ADMIN-Hooks@testgerrit.com:29418/IT/gerrit/ansible_deploy
+        basedir: ansible_deploy
+
+    builders: 
+      - shell: |
+          #!/bin/bash
+
+          echo "$IP_ADDRESS ansible_ssh_user=ansible" >> $WORKSPACE/ansible_deploy/environments/test/hosts
+
+          cd $WORKSPACE/ansible_deploy/environments
+
+          if [ ${CLOUD}='es-si-os-ohn-42-eecloud' ];then
+
+          ansible-playbook ../delete_es_openstack_VM.yml --extra-vars "name='$INSTANCE_NAME' floating_ip='$IP_ADDRESS'"
+
+          elif [ ${CLOUD}='hz-dc-os-ohn-12-eecloud' ];then
+
+          ansible-playbook ../delete_hz_openstack_VM.yml --extra-vars "name='$INSTANCE_NAME' floating_ip='$IP_ADDRESS'"
+
+          else
+
+          echo "input wrong"
+
+          fi
+          done

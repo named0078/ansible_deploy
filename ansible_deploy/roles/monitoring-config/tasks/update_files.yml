@@ -1,0 +1,50 @@
+---
+
+## Update nrpe configuration file and monitoring perl scripts on target(client) machines
+
+- include_vars: ../../common/vars/main.yml
+
+
+- name: Clean old repository
+  become: yes
+  file:
+    name: "{{ gerrit_home }}/scratch/monitoring"
+    state: absent
+
+- name: Add gerrit master public key in target_host server gerrit account known_hosts
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  git:
+    repo: "ssh://{{ gerrit_ssh_user }}@{{ gerrit_master_server }}:{{ gerrit_master_port }}/IT/gerrit/tools/monitoring"
+    key_file: "{{ key_file }}"
+    accept_hostkey: yes
+    force: yes
+    clone: no
+
+- name: Clone monitor repository
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  shell: "export PATH=/usr/local/bin:$PATH;git-lfs clone ssh://{{ gerrit_ssh_user }}@{{ gerrit_master_server }}:{{ gerrit_master_port }}/IT/gerrit/tools/monitoring {{ gerrit_home}}/scratch/monitoring"
+
+- name: Rsync nrpe.cfg
+  become: yes
+  template:
+    src: "nrpe.cfg"
+    dest: "{{ gerrit_home }}/monitoring/etc/nrpe.cfg"
+    backup: yes
+
+- name: Unzip expanded scripts package
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  unarchive:
+    remote_src: yes    ## Set remote_src=yes to unpack an archive which already exists on the target.
+    src: "{{ gerrit_home }}/scratch/monitoring/expanded_scripts.tar.gz"
+    dest: "{{gerrit_home }}/scratch/monitoring/"
+    
+- name: Rsync expanded_scripts to libexec folder
+  become: yes
+  command: "rsync -av {{ gerrit_home }}/scratch/monitoring/expanded_scripts/ {{gerrit_home }}/monitoring/libexec/"
+
+- name: Modify rsync files owner
+  become: yes
+  command: "chown -R {{ monitor_user }}:{{ monitor_user }} {{ gerrit_home }}/monitoring/libexec"

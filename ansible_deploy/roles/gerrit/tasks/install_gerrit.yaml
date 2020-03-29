@@ -1,0 +1,93 @@
+---
+- name: Create a folder for Gerrit wars
+  become: yes
+  file:
+    path: "{{ gerrit_home }}/scratch/gerrit" 
+    owner: "{{ gerrit_user }}"
+    group: "{{ gerrit_user }}"
+    mode: 0755 
+    state: directory
+
+- name: Add gerrit master public key in target_host server known_hosts
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  git:
+    repo: "ssh://{{ gerrit_ssh_user }}@{{ gerrit_master_server }}:{{ gerrit_master_port }}/IT/gerrit/gerrit/master"
+    key_file: "{{ key_file }}"
+    accept_hostkey: yes
+    force: yes
+    clone: no
+
+- name: if /gerrit/scratch/gerrit exists, delete it
+  become: yes
+  file:
+    path: "{{ gerrit_home }}/scratch/gerrit"
+    state: absent
+
+- name: fetch Gerrit war from Gerrit
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  shell: "export PATH=/usr/local/bin:$PATH;git-lfs clone ssh://{{ gerrit_ssh_user }}@{{ gerrit_master_server }}:{{ gerrit_master_port }}/IT/gerrit/gerrit/master {{ gerrit_home }}/scratch/gerrit/"
+  #git:
+  #  repo: ssh://{{ gerrit_ssh_user }}@{{ gerrit_master_server }}:{{ gerrit_master_port }}/IT/gerrit/gerrit/master
+  #  dest: "{{ gerrit_home }}/scratch/gerrit"
+  #  key_file: "{{ key_file }}"
+  #  accept_hostkey: yes
+  #  force: yes
+
+#add by David
+- name: check if {{gerrit_home}}/gerrit/bin/gerrit.sh
+  stat: 
+    path: "{{ gerrit_home }}/gerrit/bin/gerrit.sh"
+  register: result
+
+- name: Stop the Gerrit Service if {{gerrit_home}}/gerrit/bin/gerrit.sh file exists
+  become: yes
+  command: "{{ gerrit_home }}/gerrit/bin/gerrit.sh stop"
+  when: result.stat.exists == true
+  ignore_errors: yes
+  tags: stop_gerrit
+
+- name: Create a folder for gerrit etc
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  file:
+    path: "{{ gerrit_home }}/gerrit/etc"
+    state: directory
+    mode: 0755
+    owner: "{{ gerrit_user }}"
+    group: "{{ gerrit_user }}"
+#add by David
+
+##move the two tasks excuted before Initialize gerrit tasks
+- name: Create Gerrit.conf
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  template:
+    src: gerrit.config
+    dest: "{{ gerrit_home }}/gerrit/etc/gerrit.config"
+
+- name: Create Secure.conf
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  template:
+    src: secure.config
+    dest: "{{ gerrit_home }}/gerrit/etc/secure.config"
+##move the two tasks excutd before Initialize gerrit
+
+
+
+#- name: Reindexing gerrit
+#  become: yes
+#  become_user: "{{ gerrit_user }}"
+#  become_method: sudo
+#  command:  "{{ java_home }}/bin/java -jar {{ gerrit_home }}/scratch/gerrit/gerrit-{{ gerrit_war_version }}.war reindex -d {{ gerrit_home }}/gerrit/"
+#  when: initialization.changed
+
+- name: Make gerrit service started
+  become: yes
+ # become_user: "{{ gerrit_user }}"
+ # become_method: su
+  command: "{{ gerrit_home }}/gerrit/bin/gerrit.sh restart"
+  ignore_errors: yes
+  tags: restart_gerrit

@@ -1,0 +1,57 @@
+- job:
+    name: DEPLOY_GERRIT_MASTER
+    project-type: freestyle
+    default: global
+    description: 'init gerrit master'
+    disabled: false
+    parameters:
+      - string:
+          name: TARGET_HOST
+          default: NULL
+          description: "Please enter a target_host"
+      - choice:
+          name: "Environment"
+          description: "Please select a environment"
+          choices:
+            - '------ Select Environment ------'
+            - prod
+            - like-live
+            - test
+      - choice:
+          name: GERRIT_WAR_VERSION
+          description: "please select a gerrit.war version"
+          choices:
+            - '------ Select version ------'
+            - '3.1.4'
+    build-discarder:
+      daysToKeep: 10
+      numToKeep: 30
+      artifactDaysToKeep: -1
+      artifactNumToKeep: -1
+
+    build-discarder:
+      daysToKeep: 10
+      numToKeep: 30
+
+    scm:
+    - git:
+        url: ssh://ADMIN-Hooks@testgerrit.com:29418/IT/gerrit/ansible_deploy
+        basedir: ansible_deploy
+
+    builders: 
+      - shell: |
+          #!/bin/bash
+          #This job will initial a gerrit master environment with apache reverse proxy.
+
+          echo $WORKSPACE
+
+          target_host=$TARGET_HOST
+
+          echo "$target_host ansible_ssh_user=ansible" >> $WORKSPACE/ansible_deploy/environments/$Environment/hosts
+
+          cd $WORKSPACE/ansible_deploy/environments
+
+          ansible-playbook \
+              -e target_host=$target_host \
+              -e gerrit_war_version=$GERRIT_WAR_VERSION \
+              ../upgrade_gerrit_master.yml

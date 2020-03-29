@@ -1,0 +1,42 @@
+---
+
+- include_vars: ../../common/vars/main.yml
+
+- name: Verify Git directory
+  become: yes
+  stat: path="{{ gerrit_home }}/git/bin/git"
+  register: git_check
+
+- name: Cleaning up scratch area
+  become: yes
+  file:
+    path: "{{ gerrit_home }}/scratch/git/"
+    state: absent
+
+- name: Clone git repository
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  shell: "export PATH=/usr/local/bin:$PATH;git-lfs clone ssh://{{ gerrit_ssh_user }}@{{ gerrit_master_server }}:{{ gerrit_master_port }}/IT/gerrit/tools/git {{ gerrit_home }}/scratch/git"
+
+- name: Unzip dist git binary package
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  unarchive:
+    remote_src: yes    ## Set remote_src=yes to unpack an archive which already exists on the target.
+    src: "{{ gerrit_home }}/scratch/git/dist/git.tar.gz"
+    dest: "{{gerrit_home }}/scratch/git/dist/"
+
+- name: synchronize git installation files
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  command: "rsync -av --delete {{ gerrit_home }}/scratch/git/dist/git/ {{gerrit_home }}/git/"
+
+- name: Add git path to global environment
+  become: yes
+  shell: "echo '## Add git path\n export PATH={{ gerrit_home }}/git/bin:$PATH' >> /etc/profile"
+  when: git_check.stat.exists == False
+
+- name: Ensure the PATH we added become effective
+  become: yes
+  shell: "source /etc/profile"
+  when: git_check.stat.exists == False

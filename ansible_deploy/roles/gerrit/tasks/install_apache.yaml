@@ -1,0 +1,68 @@
+---
+
+- name: install apache httpd
+  become: yes
+  yum:
+    name: httpd
+    state: present
+
+- name: install mod_ssl
+  become: yes
+  yum:
+    name: mod_ssl
+    state: present
+
+- name: create apache specical log directory
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  file:
+    path: "{{ gerrit_home }}/apache/logs"
+    state: directory
+    mode: 0755
+
+- name: create apache Documentroot directory
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  file:
+    path: "{{ gerrit_home }}/apache/htdocs"
+    state: directory
+    mode: 0755
+
+- name: Create ssl directory
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  file:
+    path: "{{ gerrit_home }}/apache/ssl"
+    state: directory
+    mode: 0755
+
+- name: create ssl test.crt file to ssl directory
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  copy:
+    src: "{{ item }}"
+    dest: "{{ gerrit_home }}/apache/ssl/"
+    owner: gerrit
+    group: gerrit
+    mode: 0644
+  with_items:
+    - environments/test/test.crt
+    - environments/test/test.key
+  register: ssl
+
+- name: Create a virtualHost file for Gerrit
+  become: yes
+  template:
+    src=templates/gerrit.proxy
+    dest=/etc/httpd/conf.d/gerrit-ssl.conf
+    owner=root
+    group=root
+    mode=0644
+
+- name: ensure service is running
+  become: yes
+  systemd:
+    name=httpd
+    enabled=yes
+    state=restarted
+    masked=no

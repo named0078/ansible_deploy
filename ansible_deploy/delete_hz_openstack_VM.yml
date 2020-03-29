@@ -1,0 +1,20 @@
+---
+
+## this playbook is for auto delete instance in http://hz-dc-os-ohn-12.eecloud.nsn-net.net openstack cloud.
+## parameters: <name>,<floating_ip>
+## For example, you can run "cd ~/ansible_deploy/environments"	"ansible-playbook -e name='instance_name' -e floating_ip='ip_address' ../delete_hz_openstack_VM.yml"
+
+- name: Delete OpenStack VM
+  hosts: localhost
+  gather_facts: false
+  tasks:
+  - name: Delete a VM instance
+    os_server:
+      auth: 
+        auth_url: http://hz-dc-os-ohn-12.eecloud.nsn-net.net:5000
+        username: david
+        password: *******
+        project_name: david
+      name: "{{ name }}"
+      floating_ips: "{{ floating_ip }}"
+      state: absent

@@ -1,0 +1,57 @@
+---
+# Target ansible variables
+ansible_ssh_user: "ansible"
+ansible_ssh_user_home: "/home/ansible"
+gerrit_home: "/gerrit"
+git_home: "{{ gerrit_home }}/git"
+java_home: "{{ gerrit_home }}/jre"
+gerrit_user: "gerrit"
+git_lfs_url: "https://***/lfs/IT_gerrit-binaries-local"
+gerrit_master_server: "gerrit.***.com"
+gerrit_master_port: "29418"
+key_file: "{{ gerrit_home }}/.ssh/id_rsa"
+pub_key_file: "{{ gerrit_home }}/.ssh/id_rsa.pub"
+#Local ansible variables
+gerrit_ssh_user: "ADMIN-Hooks"
+gerrit_ssh_pvt_key: |
+  -----BEGIN RSA PRIVATE KEY-----
+*****************************
+  -----END RSA PRIVATE KEY-----
+gerrit_ssh_pub_key: |
+  ssh-rsa ******
+  
+postgres_user: "postgres"
+gerrit_db_user: "gerrit"
+gerrit_db_password: "******"
+gerrit_db_name: "reviewdb"
+
+events_db_user: "events"
+events_db_password: "test"
+events_db_name: "ChangeEvents;"
+
+#gitweb var
+gitweb_cgi_path: "/var/www/git/gitweb.cgi"
+
+#httpd var
+gerrit_https_port: "443"
+gerrit_https_cert_file: "{{ gerrit_home }}/apache/ssl/test.crt"
+gerrit_https_key_file: "{{ gerrit_home }}/apache/ssl/test.key"
+gerrit_http_port: "8080"
+
+
+## postgresql streaming replication
+postgres_port: 5432
+postgres_replication_user: "replication"
+postgres_replication_password: "replication"
+
+## monitoring
+monitor_user: "nagios"
+monitor_home: "/home/nagios"
+nagios_plugins: "{{ gerrit_home }}/monitoring/libexec"
+monitor_user_ssh_pvt_key: |
+  -----BEGIN RSA PRIVATE KEY-----
+  ********************************
+  -----END RSA PRIVATE KEY-----
+monitor_user_ssh_pub_key: |
+  ssh-rsa ************************
+  

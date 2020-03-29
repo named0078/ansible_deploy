@@ -1,0 +1,36 @@
+- job:
+    name: DEPLOY_JENKINS
+    project-type: freestyle
+    default: global
+    description: ''
+    disabled: false
+    parameters:
+      - string:
+          name: TARGET_HOST
+          default: NULL
+          description: "need input target host IP address, for example:127.0.0.1"
+    build-discarder:
+      daysToKeep: 10
+      numToKeep: 30
+      artifactDaysToKeep: -1
+      artifactNumToKeep: -1
+
+    build-discarder:
+      daysToKeep: 10
+      numToKeep: 30
+
+    scm:
+    - git:
+        url: ssh://ADMIN-Hooks@testgerrit.com:29418/IT/gerrit/ansible_deploy
+        basedir: ansible_deploy
+
+    builders: 
+      - shell: |
+          #!/bin/bash
+          echo "$target_host ansible_ssh_user=ansible" >> $WORKSPACE/ansible_deploy/environments/$Environment/hosts
+
+          # Run some shell stuff or ansible
+          chmod 600 $WORKSPACE/{ssh_keyfile}
+          ansible-playbook \
+            -e target_host=$TARGET_HOST \
+            ../auto_install_jenkins.yml

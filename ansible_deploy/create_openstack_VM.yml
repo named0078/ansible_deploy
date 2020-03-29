@@ -1,0 +1,27 @@
+---
+- name: Deploy a VM instance
+  hosts: david-ci
+  gather_facts: false
+  tasks:
+    - name: Deploy a VM instance
+      os_server:
+        name: gerrit-vm-david
+        auth:
+          auth_url: http://10.182.16.16:5000/v2.0
+          username: david
+          password: *****
+          project_name: david
+        state: present
+        image: eecloud-baseimages-rhel-7.3-2017-06-28
+        key_name: ansible-test-david
+        wait: yes
+        flavor: m1.tiny
+        auto_floating_ip: yes
+        network: network
+        availability_zone: hz-dc-os-ohn-11_1  
+        volumes: david
+        security_groups: 
+        - default
+        - ALL
+        meta:
+          hostname: gerrit-server-01

@@ -1,0 +1,46 @@
+- job:
+    name: OPS_GERRIT_STOP_HTTPD
+    project-type: freestyle
+    default: global
+    description: 'stop gerrit httpd service'
+    disabled: false
+    parameters:
+      - string:
+          name: TARGET_HOST
+          default: NULL
+          description: "Please enter a target_host"
+      - choice:
+          name: "Environment"
+          description: "Please select a environment"
+          choices:
+            - '------ Select Environment ------'
+            - prod
+            - like-live
+            - test
+    build-discarder:
+      daysToKeep: 10
+      numToKeep: 30
+      artifactDaysToKeep: -1
+      artifactNumToKeep: -1
+
+    build-discarder:
+      daysToKeep: 10
+      numToKeep: 30
+
+    scm:
+    - git:
+        url: ssh://ADMIN-Hooks@testgerrit.com:29418/IT/gerrit/ansible_deploy
+        basedir: ansible_deploy
+
+    builders: 
+      - shell: |
+          #!/bin/bash
+          #This job will stop httpd service in target server
+
+          echo "$TARGET_HOST ansible_ssh_user=ansible" >> $WORKSPACE/ansible_deploy/environments/$Environment/hosts
+
+          cd $WORKSPACE/ansible_deploy/environments
+
+          ansible-playbook \
+                -e target_host=$TARGET_HOST \
+                ../stop_httpd.yml

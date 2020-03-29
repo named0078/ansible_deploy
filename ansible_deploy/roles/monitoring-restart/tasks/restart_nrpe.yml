@@ -1,0 +1,12 @@
+---
+
+## restart nrpe service
+
+- name: Stop nrpe service
+  become: yes
+  systemd: name=nrpe state=stopped
+
+- name: Start nrpe service
+  become: yes
+  systemd: name=nrpe state=started
+

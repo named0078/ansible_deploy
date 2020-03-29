@@ -1,0 +1,116 @@
+---
+
+- include_vars: main.yml
+
+- name: Create Gerrit User
+  become: yes
+  user: name={{gerrit_user}} state=present home={{gerrit_home}}
+  ignore_errors: yes
+
+- name: Ensure gerrit directory exists
+  become: yes
+  file:
+    path: "{{ gerrit_home }}"
+    state: directory
+    mode: 0755
+    owner: "{{ gerrit_user }}"
+    group: "{{ gerrit_user }}"
+
+- name: Ensure .ssh directory exists
+  become: yes
+  file:
+    path: "{{ gerrit_home }}/.ssh"
+    state: directory
+    mode: 0600
+    owner: "{{ gerrit_user }}"
+    group: "{{ gerrit_user }}"
+
+- name: Ensure the scratch area exists
+  become: yes
+  file:
+    path: "{{ gerrit_home }}/scratch"
+    state: directory
+    mode: 0777
+    owner: "{{ gerrit_user }}"
+    group: "{{ gerrit_user }}"
+
+- name: Add private key for Gerrit
+  become: yes
+  file:
+    dest: "{{ key_file | dirname }}"
+    mode: 0700
+    owner: "{{ gerrit_user }}"
+    group: "{{ gerrit_user }}"
+    state: directory
+
+- name: Install ssh private key to gerrit user
+  become: yes
+  copy:
+    content: "{{ gerrit_ssh_pvt_key }}"
+    dest: "{{ key_file }}"
+    mode: 0600
+    owner: "{{ gerrit_user }}"
+    group: "{{ gerrit_user }}"
+
+- name: Install ssh public key to gerrit user
+  become: yes
+  copy:
+    content: "{{ gerrit_ssh_pub_key }}"
+    dest: "{{ pub_key_file }}"
+    mode: 0644
+    owner: "{{ gerrit_user }}"
+    group: "{{ gerrit_user }}"
+
+- name: Ensure the base OS version of Git is available
+  become: yes
+  yum:
+    name: git
+    state: present
+
+- name: Add gerrit master public key in target_host server gerrit account known_hosts
+  become: yes
+  become_user: "{{ gerrit_user }}"
+  git:
+    repo: "ssh://{{ gerrit_ssh_user }}@{{ gerrit_master_server }}:{{ gerrit_master_port }}/IT/gerrit/gerrit/master"
+    key_file: "{{ key_file }}"
+    accept_hostkey: yes
+    force: yes
+    clone: no
+
+- name: Install ssh key to ssh user
+  become: yes
+  copy:
+    content: "{{ gerrit_ssh_pvt_key }}"
+    dest: "{{ ansible_ssh_user_home }}/.ssh/id_rsa"
+    mode: 0600
+    owner: "{{ ansible_ssh_user }}"
+    group: "{{ ansible_ssh_user }}"
+
+- name: Check if git-lfs is installed
+  become: yes
+  stat: path="/usr/local/bin/git-lfs" 
+  register: lfs_check
+
+- name: Clone git-lfs from gerrit server
+  become: yes
+  become_user: "{{ ansible_ssh_user }}"
+  git:
+    repo: ssh://{{ gerrit_ssh_user }}@{{ gerrit_master_server }}:{{ gerrit_master_port }}/IT/gerrit/tools/git-lfs.git
+    dest: "{{ ansible_ssh_user_home }}/git-lfs"
+    key_file: "{{ key_file }}"
+    accept_hostkey: yes
+    force: yes
+  when: lfs_check.stat.exists == False
+
+- name: Unzip git-lfs package
+  become: yes
+  unarchive:
+    src: "{{ ansible_ssh_user_home }}/git-lfs/git-lfs-linux-amd64-2.2.1.tar.gz"
+    dest: "{{ ansible_ssh_user_home }}/"
+    remote_src: yes
+  when: lfs_check.stat.exists == False
+
+- name: Install git-lfs
+  become: yes
+  command: "{{ ansible_ssh_user_home }}/git-lfs-2.2.1/install.sh"
+  when: lfs_check.stat.exists == False

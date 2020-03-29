@@ -1,0 +1,5 @@
+---
+
+- name: Install python deps
+  become: yes
+  yum: name=libselinux-python state=latest

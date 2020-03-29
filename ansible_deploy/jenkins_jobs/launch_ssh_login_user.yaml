@@ -1,0 +1,43 @@
+- job:
+    name: LAUNCH_SSH_LOGIN_USER_test
+    project-type: freestyle
+    default: global
+    description: 'Create remote ssh login user "ansible". Please note this job just use for http://hz-dc-os-ohn-12.eecloud.nsn-net.net EE Cloud'
+    parameters:
+      - string:
+          name: TARGET_HOST
+          default: NULL
+          description: "Please enter a target_host"
+      - choice:
+          name: KEY
+          description: "Please select a private key.  'hz-dc-os-ohn-12-eecloud.pem' from http://hz-dc-os-ohn-12.eecloud.nsn-net.net cloud"
+          choices:
+            - '------Select private key file-----'
+            - hz-dc-os-ohn-12-eecloud
+
+    build-discarder:
+      daysToKeep: 10
+      numToKeep: 30
+      artifactDaysToKeep: -1
+      artifactNumToKeep: -1
+
+    scm:
+    - git:
+        url: ssh://ADMIN-Hooks@testgerrit.com:29418/IT/gerrit/ansible_deploy
+        basedir: ansible_deploy
+
+    builders: 
+      - shell: |
+          ## create a ssh login user "ansible"
+          #!/bin/bash
+
+          cd $WORKSPACE/ansible_deploy/environments
+
+          chmod 600 ssh-key/*
+
+          echo "$TARGET_HOST ansible_ssh_user=root ansible_ssh_private_key_file=ssh-key/$KEY" >> test/hosts
+
+          ansible-playbook \
+                -e target_host=$TARGET_HOST \
+                ../launch_openstack_user.yml
+

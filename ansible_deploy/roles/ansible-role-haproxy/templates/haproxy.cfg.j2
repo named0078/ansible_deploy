@@ -1,0 +1,69 @@
+global
+    log 127.0.0.1 local2 debug
+    daemon
+    pidfile /var/run/haproxy.pid
+    maxconn 10000
+defaults
+    mode tcp
+    retries 3
+    timeout connect 5000ms
+    timeout client 0ms
+    timeout server 0ms
+frontend ssh-in
+    log 127.0.0.1 local2 debug
+    bind *:29418
+    default_backend gerrit-ssh-servers
+    option tcplog
+    maxconn 2000
+frontend espoo-ssh-in
+    log 127.0.0.1 local2 debug
+    bind *:8282
+    default_backend gerrit-ssh-servers
+    option tcplog
+    maxconn 2000
+frontend https
+    log 127.0.0.1 local2 debug
+    bind *:443
+    option tcplog
+    maxconn 5000
+    # NOTE: users should connect over ssh to
+    # <ip>:<ssh_port>, which should be the same as the
+    # sshd.advertisedAddress parameter in the
+    # 'gerrit.config' files
+    default_backend gerrit-https-servers
+frontend http
+    log 127.0.0.1 local2 debug
+    bind *:80
+    option tcplog
+    maxconn 5000
+    # NOTE: users should connect over ssh to
+    # <ip>:<ssh_port>, which should be the same as the
+    # sshd.advertisedAddress parameter in the
+    # 'gerrit.config' files
+    default_backend gerrit-http-servers
+
+backend gerrit-http-servers
+    log 127.0.0.1 local2 debug
+    option redispatch
+    server gerritM1 {{ ip_master_1 }}:80 check maxconn 1000
+    server gerritM2 {{ ip_master_2 }}:80 check maxconn 1000
+
+backend gerrit-ssh-servers
+    log 127.0.0.1 local2 debug
+    option redispatch
+    server gerritM1 {{ ip_master_1 }}:29418 check maxconn 500
+    server gerritM2 {{ ip_master_2 }}:29418 check maxconn 500
+backend gerrit-https-servers
+    log 127.0.0.1 local2 debug
+    option redispatch
+    server gerritM1 {{ ip_master_1 }}:443 check maxconn 1000
+    server gerritM2 {{ ip_master_2 }}:443 check maxconn 1000
+listen status
+    bind 0.0.0.0:1080
+    mode http
+    log global
+    stats refresh 30s
+    stats uri /haproxy?stats
+    stats realm Private lands
+    stats auth admin:password
+    stats hide-version

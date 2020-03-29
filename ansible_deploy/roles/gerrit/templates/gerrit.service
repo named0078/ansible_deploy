@@ -1,0 +1,27 @@
+[Unit]
+Description=Web based code review and project management for Git based
+projects
+After=syslog.target network.target remote-fs.target
+
+[Service]
+Type=simple
+User={{ gerrit_user }}
+ExecStart={{ java_home }}/bin/java -DGerritCodeReview=1 -jar {{gerrit_home }}/gerrit/bin/gerrit.war daemon -d {{ gerrit_home }}/gerrit/
+ExecStop=/bin/kill -s SIGINT $MAINPID
+# stupid java exit codes
+SuccessExitStatus=130 SIGINT
+SuccessExitStatus=143 SIGTERM
+
+# default gerrit ulimits set by the init.d script... your choice
+LimitCORE=0
+LimitDATA=unlimited
+LimitFSIZE=unlimited
+LimitRSS=unlimited
+# NOFILE : GERRIT_FDS, determined by "core.packedGitOpenFiles" in thescript
+LimitNOFILE=1024
+LimitCPU=unlimited
+LimitAS=unlimited
+LimitLOCKS=unlimited
+
+[Install]
+WantedBy=multi-user.target
